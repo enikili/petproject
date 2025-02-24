@@ -1,33 +1,36 @@
 package main
 
 import (
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"log"
 	"awesomeProject1/internal/database"
 	"awesomeProject1/internal/handlers"
 	"awesomeProject1/internal/taskService"
-	"log"
-	"net/http"
-
-	"github.com/gorilla/mux"
+	"awesomeProject1/internal/web/tasks"
 )
 
 func main() {
 	database.InitDB()
-	database.DB.AutoMigrate(&taskService.Task{})
+	database.DB.AutoMigrate(&taskService.Tasks{})
 
-	var repo = taskService.NewTaskRepository(database.DB)
+	repo := taskService.NewTaskRepository(database.DB)
 	service := taskService.NewService(repo)
 
 	handler := handlers.NewHandler(service)
+	
+	// Инициализируем echo
+	e := echo.New()
+	
+	// используем Logger и Recover
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	
+	// Прикол для работы в echo. Передаем и регистрируем хендлер в echo
+	strictHandler := tasks.NewStrictHandler(handler, nil) // тут будет ошибка
+	tasks.RegisterHandlers(e, strictHandler)
 
-	router := mux.NewRouter()
-	router.HandleFunc("/api/get", handler.GetTasksHandler).Methods("GET")
-	router.HandleFunc("/api/post", handler.PostTaskHandler).Methods("POST")
-	router.HandleFunc("/api/patch/{id}", handler.UpdateTaskHandler).Methods("PATCH")
-	router.HandleFunc("/api/delete/{id}", handler.DeleteTaskHandler).Methods("DELETE")
-
-	log.Println("Starting server on :6050")
-	err := http.ListenAndServe(":6050", router)
-	if err != nil {
-		log.Fatal(err)
+	if err := e.Start(":8080"); err != nil {
+		log.Fatalf("failed to start with err: %v", err)
 	}
 }
