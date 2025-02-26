@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	database.InitDB()
-	database.DB.AutoMigrate(&taskService.Tasks{})
+	database.InitDB() 
+
 
 	repo := taskService.NewTaskRepository(database.DB)
 	service := taskService.NewService(repo)
