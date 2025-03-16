@@ -83,6 +83,21 @@ paths:
         '404':
           description: Task not found
 
+  /users:
+    get:
+      summary: Get all users
+      tags:
+        - users # Added tags
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
 components:
   schemas:
     Task:
@@ -108,3 +123,17 @@ components:
         is_done:
           type: boolean
           nullable: true
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+  parameters:
+    UserId: # This parameter is not used
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer

@@ -6,4 +6,5 @@ CREATE TABLE tasks (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMP DEFAULT NULL
     );
+
 ALTER TABLE tasks ADD COLUMN title VARCHAR(255);
