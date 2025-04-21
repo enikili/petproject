@@ -1,29 +1,33 @@
 package taskService
 
+
+
 type TaskService struct {
-    repo TaskRepository
+	repo TaskRepository
 }
 
-func NewService(repo TaskRepository) *TaskService {
-    return &TaskService{repo: repo}
+func NewTaskService(repo TaskRepository) *TaskService {
+	return &TaskService{repo: repo}
 }
 
-func (s *TaskService) CreateTask(task Tasks) (Tasks, error) {
-    return s.repo.CreateTask(task)
+func (service *TaskService) CreateTask(task Task) (Task, error) {
+	return service.repo.CreateTask(task)
 }
 
-func (s *TaskService) GetAllTasks() ([]Tasks, error) {
-    return s.repo.GetAllTasks()
+func (service *TaskService) GetAllTasks() ([]Task, error) {
+
+	return service.repo.GetAllTasks()
 }
 
-func (s *TaskService) UpdateTaskByID(id uint, task Tasks) (Tasks, error) {
+func (service *TaskService) GetTaskByID(id uint) (Task, error) {
+	return service.repo.GetTaskByID(id)
+}
+
+func (s *TaskService) UpdateTaskByID(id uint, task Task) (Task, error) {
     return s.repo.UpdateTaskByID(id, task)
 }
 
-func (s *TaskService) DeleteTaskByID(id uint) error {
-    return s.repo.DeleteTaskByID(id)
+func (service *TaskService) DeleteTaskByID(id uint) error {
+	return service.repo.DeleteTaskByID(id)
 }
 
-func (s *TaskService) PatchTaskByID(id uint, updates map[string]interface{}) (Tasks, error) {
- return s.repo.PatchTaskByID(id, updates)
-}

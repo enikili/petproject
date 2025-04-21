@@ -12,35 +12,30 @@ import (
 )
 
 func main() {
-    database.InitDB()
 
-    
-    Taskrepo := taskService.NewTaskRepository(database.DB)
-    Taskservice := taskService.NewService(Taskrepo)
-    taskHandler := handlers.NewHandler(Taskservice)
+	database.InitDB()
 
-    
-    UserRepo := userService.NewUserRepository(database.DB)
-    UserService := userService.NewUserService(UserRepo)
-    UserHandler := handlers.NewUserHandler(UserService)
+	repoTask := taskService.NewTaskRepository(database.DB)
+	serviceTask := taskService.NewTaskService(repoTask)
 
-    e := echo.New()
+	repoUser := userService.NewUserRepository(database.DB, repoTask)
+	serviceUser := userService.NewUserService(repoUser)
 
-    e.Use(middleware.Logger())
-    e.Use(middleware.Recover())
+	taskHTTPHandler := handlers.NewTaskHandler(serviceTask)
+	userHTTPHandler := handlers.NewUserHandler(serviceUser)
 
-    
-    strictHandler := tasks.NewStrictHandler(taskHandler, nil)
-    tasks.RegisterHandlers(e, strictHandler)
+	e := echo.New()
 
-    // Регистрация маршрутов для пользователей
-    e.POST("/users", UserHandler.CreateUser)          
-    e.GET("/users", UserHandler.GetAllUsers)          
-    e.GET("/users/:id", UserHandler.GetUserByID)      
-    e.PUT("/users/:id", UserHandler.UpdateUser)       
-    e.DELETE("/users/:id", UserHandler.DeleteUser)    
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 
-    if err := e.Start(":8080"); err != nil {
-        log.Fatalf("failed to start with err: %v", err)
-    }
+	tasksHandler := tasks.NewStrictHandler(taskHTTPHandler, nil)
+	tasks.RegisterHandlers(e, tasksHandler)
+
+	usersHandler := User.NewStrictHandler(userHTTPHandler, nil)
+	User.RegisterHandlers(e, usersHandler)
+
+	if err := e.Start(":8080"); err != nil {
+		log.Fatal("failed to start with error", err)
+	}
 }

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/oapi-codegen/runtime"
@@ -17,23 +16,17 @@ import (
 
 // Task defines model for Task.
 type Task struct {
-	CompletedAt *time.Time `json:"completed_at"`
-	Id          *uint      `json:"id,omitempty"`
-	IsDone      *bool      `json:"is_done,omitempty"`
-	Task        *string    `json:"task,omitempty"`
-}
-
-// TaskUpdate defines model for TaskUpdate.
-type TaskUpdate struct {
-	IsDone *bool   `json:"is_done"`
-	Task   *string `json:"task"`
+	Id     *int64 `json:"id,omitempty"`
+	IsDone *bool  `json:"is_done,omitempty"`
+	Task   string `json:"task"`
+	UserId int64  `json:"user_id"`
 }
 
 // PostTasksJSONRequestBody defines body for PostTasks for application/json ContentType.
 type PostTasksJSONRequestBody = Task
 
 // PatchTasksIdJSONRequestBody defines body for PatchTasksId for application/json ContentType.
-type PatchTasksIdJSONRequestBody = TaskUpdate
+type PatchTasksIdJSONRequestBody = Task
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -43,12 +36,12 @@ type ServerInterface interface {
 	// Create a new task
 	// (POST /tasks)
 	PostTasks(ctx echo.Context) error
-	// Delete a task
+	// Delete a task by ID
 	// (DELETE /tasks/{id})
-	DeleteTasksId(ctx echo.Context, id uint) error
-	// Update a task
+	DeleteTasksId(ctx echo.Context, id int) error
+	// Update an existing by ID
 	// (PATCH /tasks/{id})
-	PatchTasksId(ctx echo.Context, id uint) error
+	PatchTasksId(ctx echo.Context, id int) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -78,7 +71,7 @@ func (w *ServerInterfaceWrapper) PostTasks(ctx echo.Context) error {
 func (w *ServerInterfaceWrapper) DeleteTasksId(ctx echo.Context) error {
 	var err error
 	// ------------- Path parameter "id" -------------
-	var id uint
+	var id int
 
 	err = runtime.BindStyledParameterWithOptions("simple", "id", ctx.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -94,7 +87,7 @@ func (w *ServerInterfaceWrapper) DeleteTasksId(ctx echo.Context) error {
 func (w *ServerInterfaceWrapper) PatchTasksId(ctx echo.Context) error {
 	var err error
 	// ------------- Path parameter "id" -------------
-	var id uint
+	var id int
 
 	err = runtime.BindStyledParameterWithOptions("simple", "id", ctx.Param("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -175,7 +168,7 @@ func (response PostTasks201JSONResponse) VisitPostTasksResponse(w http.ResponseW
 }
 
 type DeleteTasksIdRequestObject struct {
-	Id uint `json:"id"`
+	Id int `json:"id"`
 }
 
 type DeleteTasksIdResponseObject interface {
@@ -199,7 +192,7 @@ func (response DeleteTasksId404Response) VisitDeleteTasksIdResponse(w http.Respo
 }
 
 type PatchTasksIdRequestObject struct {
-	Id   uint `json:"id"`
+	Id   int `json:"id"`
 	Body *PatchTasksIdJSONRequestBody
 }
 
@@ -214,6 +207,14 @@ func (response PatchTasksId200JSONResponse) VisitPatchTasksIdResponse(w http.Res
 	w.WriteHeader(200)
 
 	return json.NewEncoder(w).Encode(response)
+}
+
+type PatchTasksId400Response struct {
+}
+
+func (response PatchTasksId400Response) VisitPatchTasksIdResponse(w http.ResponseWriter) error {
+	w.WriteHeader(400)
+	return nil
 }
 
 type PatchTasksId404Response struct {
@@ -232,10 +233,10 @@ type StrictServerInterface interface {
 	// Create a new task
 	// (POST /tasks)
 	PostTasks(ctx context.Context, request PostTasksRequestObject) (PostTasksResponseObject, error)
-	// Delete a task
+	// Delete a task by ID
 	// (DELETE /tasks/{id})
 	DeleteTasksId(ctx context.Context, request DeleteTasksIdRequestObject) (DeleteTasksIdResponseObject, error)
-	// Update a task
+	// Update an existing by ID
 	// (PATCH /tasks/{id})
 	PatchTasksId(ctx context.Context, request PatchTasksIdRequestObject) (PatchTasksIdResponseObject, error)
 }
@@ -305,7 +306,7 @@ func (sh *strictHandler) PostTasks(ctx echo.Context) error {
 }
 
 // DeleteTasksId operation middleware
-func (sh *strictHandler) DeleteTasksId(ctx echo.Context, id uint) error {
+func (sh *strictHandler) DeleteTasksId(ctx echo.Context, id int) error {
 	var request DeleteTasksIdRequestObject
 
 	request.Id = id
@@ -330,7 +331,7 @@ func (sh *strictHandler) DeleteTasksId(ctx echo.Context, id uint) error {
 }
 
 // PatchTasksId operation middleware
-func (sh *strictHandler) PatchTasksId(ctx echo.Context, id uint) error {
+func (sh *strictHandler) PatchTasksId(ctx echo.Context, id int) error {
 	var request PatchTasksIdRequestObject
 
 	request.Id = id

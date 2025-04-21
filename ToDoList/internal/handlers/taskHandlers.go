@@ -4,121 +4,97 @@ import (
 	"awesomeProject1/internal/taskService"
 	"awesomeProject1/internal/web/tasks"
 	"context"
-	"fmt"
-	"log"
+	"net/http"
+	"github.com/labstack/echo/v4"
 )
-
 type Handler struct {
 	Service *taskService.TaskService
 }
 
+func NewTaskHandler(service *taskService.TaskService) *Handler {
+	return &Handler{Service: service}
+}
 
-func (h *Handler) GetTasks(ctx context.Context, _ tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
-	
+func (h *Handler) GetTasks(_ context.Context, _ tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
 	allTasks, err := h.Service.GetAllTasks()
 	if err != nil {
-		log.Printf("failed to get all tasks: %v", err)
 		return nil, err
 	}
 
-	
-	response := make(tasks.GetTasks200JSONResponse, 0)
+	var response []tasks.Task
 
-	
 	for _, tsk := range allTasks {
 		task := tasks.Task{
 			Id:     &tsk.ID,
-			Task:   &tsk.Title,
-			IsDone: &tsk.IsDone,
+			Task:   *tsk.Task,
+			IsDone: tsk.IsDone,
 		}
 		response = append(response, task)
 	}
 
-	
-	return response, nil
+	return tasks.GetTasks200JSONResponse(response), nil
 }
 
-
-func (h *Handler) PostTasks(ctx context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
-	
-	if request.Body.Task == nil || request.Body.IsDone == nil {
-		return nil, fmt.Errorf("task text or is_done field is missing")
-	}
-
-	
+func (h *Handler) PostTasks(_ context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
 	taskRequest := request.Body
 
-	
-	taskToCreate := taskService.Tasks{
-		Title:  *taskRequest.Task,
-		IsDone: *taskRequest.IsDone,
+	taskToCreate := taskService.Task{
+		Task:   &taskRequest.Task,
+		IsDone: taskRequest.IsDone,
+		UserID: taskRequest.Id,
 	}
-
-	
 	createdTask, err := h.Service.CreateTask(taskToCreate)
 	if err != nil {
-		log.Printf("failed to create task: %v", err)
 		return nil, err
 	}
 
-	
 	response := tasks.PostTasks201JSONResponse{
 		Id:     &createdTask.ID,
-		Task:   &createdTask.Title,
-		IsDone: &createdTask.IsDone,
+		Task:   *createdTask.Task,
+		IsDone: createdTask.IsDone,
+		UserId: int(*createdTask.UserID),
 	}
 
-	
 	return response, nil
 }
 
-
 func (h *Handler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
-	
-	if request.Body.Task == nil && request.Body.IsDone == nil {
-		return nil, fmt.Errorf("at least one field (task or is_done) must be provided")
-	}
+    
+    updateData := taskService.Task{
+        UserID: request.Body.Id,
+    }
 
-	
-	updates := make(map[string]interface{})
-	if request.Body.Task != nil {
-		updates["Title"] = *request.Body.Task
-	}
-	if request.Body.IsDone != nil {
-		updates["IsDone"] = *request.Body.IsDone
-	}
+    
+    if request.Body.Task != "" { 
+        updateData.Task = &request.Body.Task
+    }
+    if request.Body.IsDone != nil { 
+        updateData.IsDone = *&request.Body.IsDone
+    }
+    if request.Body.UserId != 0 { 
+        updateData.UserID = request.Body.Id
+    }
 
-	
-	updatedTask, err := h.Service.PatchTaskByID(uint(request.Id), updates)
-	if err != nil {
-		log.Printf("failed to update task: %v", err)
-		return nil, err
-	}
+    updatedTask, err := h.Service.UpdateTaskByID(uint(request.Id), updateData)
+    if err != nil {
+        return nil, echo.NewHTTPError(http.StatusInternalServerError, "failed to update task")
+    }
 
-	
-	return tasks.PatchTasksId200JSONResponse{
-		Id:     &updatedTask.ID,
-		Task:   &updatedTask.Title,
-		IsDone: &updatedTask.IsDone,
-	}, nil
+    taskID := updatedTask.ID
+    return tasks.PatchTasksId200JSONResponse{
+        Id:     &taskID,
+        Task:   *updatedTask.Task,
+        IsDone: updatedTask.IsDone,
+        UserId: int(*updatedTask.UserID),
+    }, nil
 }
 
+func (h *Handler) DeleteTasksId(_ context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
+	taskID := uint(request.Id)
 
-func (h *Handler) DeleteTasksId(ctx context.Context, request tasks.DeleteTasksIdRequestObject) (tasks.DeleteTasksIdResponseObject, error) {
-	
-	err := h.Service.DeleteTaskByID(uint(request.Id))
+	err := h.Service.DeleteTaskByID(taskID)
 	if err != nil {
-		log.Printf("failed to delete task: %v", err)
 		return nil, err
 	}
-
-	
 	return tasks.DeleteTasksId204Response{}, nil
-}
-
-
-func NewHandler(service *taskService.TaskService) *Handler {
-	return &Handler{
-		Service: service,
-	}
 }
