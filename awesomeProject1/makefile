@@ -9,6 +9,8 @@ gen:
 
 gen-users:
 	oapi-codegen -config openapi/.openapi -include-tags users -package users openapi/openapi.yaml > ./internal/web/users/api.gen.go
+
+gen-all: gen gen-users
 lint:
 	golangci-lint run --out-format=colored-line-number
 

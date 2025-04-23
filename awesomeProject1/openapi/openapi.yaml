@@ -9,6 +9,37 @@ servers:
     description: Local development server
 
 paths:
+  /tasks:
+    post:
+      summary: Create a new task
+      tags:
+        - tasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskCreate'
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /tasks/{id}:
     get:
       summary: Get tasks by user id
@@ -341,6 +372,23 @@ components:
       required:
         - task
         - userId
+
+    TaskCreate:
+      type: object
+      properties:
+        task:
+          type: string
+          example: "Buy groceries"
+        is_done:
+          type: boolean
+          example: false
+        user_id:
+          type: integer
+          format: int64
+          example: 1
+      required:
+        - task
+        - user_id
 
     TaskBody:
       type: object

@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 
 	"awesomeProject1/internal/taskService"
 	"awesomeProject1/internal/web/tasks"
+
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
@@ -45,33 +47,71 @@ func (h *TaskHandler) GetTasksId(ctx context.Context, request tasks.GetTasksIdRe
 	return response, nil
 }
 
+func (h *TaskHandler) PostTasks(ctx context.Context, request tasks.PostTasksRequestObject) (tasks.PostTasksResponseObject, error) {
+    if request.Body.Task == "" {
+        return nil, echo.NewHTTPError(http.StatusBadRequest, "task description is required")
+    }
+    if request.Body.UserId == 0 {
+        return nil, echo.NewHTTPError(http.StatusBadRequest, "user ID is required")
+    }
+
+    userID := uint(request.Body.UserId)
+    newTask := taskService.Task{
+        Task:   &request.Body.Task,
+        IsDone: request.Body.IsDone,
+        UserID: &userID,
+    }
+
+    createdTask, err := h.Service.CreateTask(userID, newTask)
+    if err != nil {
+        if strings.Contains(err.Error(), "user not found") {
+            return nil, echo.NewHTTPError(http.StatusNotFound, "user not found")
+        }
+        return nil, echo.NewHTTPError(http.StatusInternalServerError, "failed to create task")
+    }
+
+    taskID := int64(createdTask.ID)
+    userIDResp := int64(*createdTask.UserID)
+
+    return tasks.PostTasks201JSONResponse{
+        Id:     &taskID,
+        Task:   *createdTask.Task,
+        IsDone: createdTask.IsDone,
+        UserId: userIDResp,
+    }, nil
+}
+
+
 func (h *TaskHandler) PostTasksId(ctx context.Context, request tasks.PostTasksIdRequestObject) (tasks.PostTasksIdResponseObject, error) {
-	userID := uint(request.Id)
-	
-	if request.Body.Task == "" {
-		return nil, echo.NewHTTPError(http.StatusBadRequest, "task description is required")
-	}
+    userID := uint(request.Id)
+    
+    if request.Body.Task == "" {
+        return nil, echo.NewHTTPError(http.StatusBadRequest, "task description is required")
+    }
 
-	newTask := taskService.Task{
-		Task:   &request.Body.Task,
-		IsDone: request.Body.IsDone,
-	}
+    newTask := taskService.Task{
+        Task:   &request.Body.Task,
+        IsDone: request.Body.IsDone,
+        UserID: &userID,
+    }
 
-	createdTask, err := h.Service.CreateTask(userID, newTask)
-	if err != nil {
-		return nil, echo.NewHTTPError(http.StatusInternalServerError, "failed to create task")
-	}
+    createdTask, err := h.Service.CreateTask(userID, newTask)
+		
+    if err != nil {
+        if strings.Contains(err.Error(), "user not found") {
+            return nil, echo.NewHTTPError(http.StatusNotFound, "user not found")
+        }
+        return nil, echo.NewHTTPError(http.StatusInternalServerError, "failed to create task")
+    }
+		taskID := int64(createdTask.ID)
+    userIDResp := int64(*createdTask.UserID)
 
-	taskID := int64(createdTask.ID)
-	userIDResp := int64(*createdTask.UserID)
-	response := tasks.PostTasksId201JSONResponse{
-		Id:     &taskID,
-		Task:   *createdTask.Task,
-		IsDone: createdTask.IsDone,
-		UserId: userIDResp,
-	}
-
-	return response, nil
+    return tasks.PostTasksId201JSONResponse{
+        Id:     &taskID,  
+        Task:   *createdTask.Task,
+        IsDone: createdTask.IsDone,
+        UserId: userIDResp,
+    }, nil
 }
 
 func (h *TaskHandler) PatchTasksId(ctx context.Context, request tasks.PatchTasksIdRequestObject) (tasks.PatchTasksIdResponseObject, error) {
