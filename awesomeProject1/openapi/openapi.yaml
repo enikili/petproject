@@ -11,6 +11,7 @@ servers:
 paths:
   /tasks:
     get:
+      operationId: GetTasks
       summary: Get all tasks
       tags:
         - tasks
@@ -31,6 +32,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     
     post:
+      operationId: PostTasks
       summary: Create a new task
       tags:
         - tasks
@@ -62,7 +64,8 @@ paths:
 
   /tasks/{id}:
     get:
-      summary: Get tasks by user id
+      operationId: GetTasksById
+      summary: Get task by ID
       tags:
         - tasks
       parameters:
@@ -72,62 +75,16 @@ paths:
           schema:
             type: integer
             format: int64
-          description: ID of the user
+          description: ID of the task
       responses:
         '200':
-          description: A list of tasks
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Task'
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    post:
-      summary: Create a new task for user
-      tags:
-        - tasks
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-          description: ID of the user
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TaskBody'
-      responses:
-        '201':
-          description: Task created successfully
+          description: Task details
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Task'
-        '400':
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: User not found
+          description: Task not found
           content:
             application/json:
               schema:
@@ -140,6 +97,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
     patch:
+      operationId: PatchTasksById
       summary: Update a task
       tags:
         - tasks
@@ -184,6 +142,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
     delete:
+      operationId: DeleteTasksById
       summary: Delete a task
       tags:
         - tasks
@@ -211,8 +170,45 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /users/{id}/tasks:
+    get:
+      operationId: GetUsersIdTasks
+      summary: Get all tasks for specific user
+      tags:
+        - tasks
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the user
+      responses:
+        '200':
+          description: A list of user's tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /users:
     get:
+      operationId: GetUsers
       summary: Get all users
       tags:
         - users
@@ -233,6 +229,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
     post:
+      operationId: PostUsers
       summary: Create a new user
       tags:
         - users
@@ -263,7 +260,41 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
   /users/{id}:
+    get:
+      operationId: GetUsersById
+      summary: Get user by ID
+      tags:
+        - users
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID of the user
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
     patch:
+      operationId: PatchUsersById
       summary: Update user
       tags:
         - users
@@ -308,6 +339,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
     delete:
+      operationId: DeleteUsersById
       summary: Delete user
       tags:
         - users
@@ -350,6 +382,8 @@ components:
           example: "johndoe"
         email:
           type: string
+          format: email
+          example: "user@example.com"
         password:
           type: string
           format: password
@@ -365,11 +399,18 @@ components:
       properties:
         username:
           type: string
+          example: "newuser"
         password:
           type: string
+          example: "newpassword123"
         email:
           type: string
           format: email
+          example: "newuser@example.com"
+      required:
+        - username
+        - password
+        - email
 
     Task:
       type: object
@@ -398,7 +439,7 @@ components:
       properties:
         task:
           type: string
-          example: "Buy groceries"
+          example: "Complete project"
         is_done:
           type: boolean
           example: false
@@ -415,10 +456,10 @@ components:
       properties:
         task:
           type: string
-          example: "Buy groceries"
+          example: "Updated task description"
         is_done:
           type: boolean
-          example: false
+          example: true
       required:
         - task
 
@@ -430,7 +471,7 @@ components:
           example: "Error description"
         code:
           type: integer
-          example: 500
+          example: 404
         details:
           type: string
           example: "Additional error details"

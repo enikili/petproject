@@ -6,10 +6,11 @@ import (
 
 type TaskRepository interface {
 	CreateTask(id uint, task Task) (Task, error)
-	GetTaskByUserId(id uint) ([]Task, error)
+	GetUserTasks(id uint) ([]Task, error)
 	UpdateTaskByID(id uint, task Task) (Task, error)
 	DeleteTaskByID(id uint) error
 	GetAllTasks() ([]Task, error)
+	GetTaskByID(id uint) (*Task, error)
 }
 
 type taskRepository struct {
@@ -29,13 +30,12 @@ func (r *taskRepository) CreateTask(id uint, task Task) (Task, error) {
 	return task, nil
 }
 
-func (r *taskRepository) GetTaskByUserId(id uint) ([]Task, error) {
+func (r *taskRepository) GetUserTasks(id uint) ([]Task, error) {
 	var tasks []Task
 	err := r.db.Where("user_id = ?", id).Find(&tasks).Error
 	if err != nil {
 		return nil, err
 	}
-
 	return tasks, nil
 }
 
@@ -44,27 +44,40 @@ func (r *taskRepository) UpdateTaskByID(id uint, task Task) (Task, error) {
 	if err := r.db.First(&existingTask, id).Error; err != nil {
 		return Task{}, err
 	}
-	existingTask.Task = task.Task
-	existingTask.IsDone = task.IsDone
-
+	if task.Task != nil {
+		existingTask.Task = task.Task
+	}
+	if *task.IsDone {
+		existingTask.IsDone = task.IsDone
+	}
 	if err := r.db.Save(&existingTask).Error; err != nil {
 		return Task{}, err
 	}
-
 	return existingTask, nil
 }
 
 func (r *taskRepository) DeleteTaskByID(id uint) error {
-	var task Task
-	result := r.db.Where("id = ?", id).Delete(&task)
+	result := r.db.Delete(&Task{}, id)
 	if result.Error != nil {
 		return result.Error
 	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
 	return nil
-
 }
-func (repo *taskRepository) GetAllTasks() ([]Task, error) {
+
+func (r *taskRepository) GetAllTasks() ([]Task, error) {
 	var tasks []Task
-	err := repo.db.Find(&tasks).Error
+	err := r.db.Find(&tasks).Error
 	return tasks, err
+}
+
+func (r *taskRepository) GetTaskByID(id uint) (*Task, error) {
+	var task Task
+	err := r.db.First(&task, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &task, nil
 }
