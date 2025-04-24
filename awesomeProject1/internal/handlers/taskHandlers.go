@@ -21,6 +21,27 @@ func NewTaskHandler(service *taskService.TaskService) *TaskHandler {
 	return &TaskHandler{Service: service}
 }
 
+
+func (h *TaskHandler) GetTasks(_ context.Context, _ tasks.GetTasksRequestObject) (tasks.GetTasksResponseObject, error) {
+	allTasks, err := h.Service.GetAllTasks()
+	if err != nil {
+		return nil, err
+	}
+
+	response := make([]tasks.Task, 0)
+
+	for _, tsk := range allTasks {
+		task := tasks.Task{
+			Id:     &tsk.ID,
+			Task:   *tsk.Task,
+			IsDone: tsk.IsDone,
+		}
+		response = append(response, task)
+	}
+
+	return tasks.GetTasks200JSONResponse(response), nil
+}
+
 func (h *TaskHandler) GetTasksId(ctx context.Context, request tasks.GetTasksIdRequestObject) (tasks.GetTasksIdResponseObject, error) {
 	userID := uint(request.Id)
 	

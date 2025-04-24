@@ -21,7 +21,7 @@ func main() {
 	
 	tasksRepo := taskService.NewTaskRepository(database.DB)
 	usersRepo := userService.NewUserRepository(database.DB)
-	tasksService := taskService.NewService(tasksRepo)
+	tasksService := taskService.NewTaskService(tasksRepo)
 	usersService := userService.NewUserService(usersRepo)
 
 	

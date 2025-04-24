@@ -53,6 +53,9 @@ type PostTasksIdJSONRequestBody = TaskBody
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get all tasks
+	// (GET /tasks)
+	GetTasks(ctx echo.Context) error
 	// Create a new task
 	// (POST /tasks)
 	PostTasks(ctx echo.Context) error
@@ -73,6 +76,15 @@ type ServerInterface interface {
 // ServerInterfaceWrapper converts echo contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler ServerInterface
+}
+
+// GetTasks converts echo context to params.
+func (w *ServerInterfaceWrapper) GetTasks(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetTasks(ctx)
+	return err
 }
 
 // PostTasks converts echo context to params.
@@ -176,12 +188,38 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 		Handler: si,
 	}
 
+	router.GET(baseURL+"/tasks", wrapper.GetTasks)
 	router.POST(baseURL+"/tasks", wrapper.PostTasks)
 	router.DELETE(baseURL+"/tasks/:id", wrapper.DeleteTasksId)
 	router.GET(baseURL+"/tasks/:id", wrapper.GetTasksId)
 	router.PATCH(baseURL+"/tasks/:id", wrapper.PatchTasksId)
 	router.POST(baseURL+"/tasks/:id", wrapper.PostTasksId)
 
+}
+
+type GetTasksRequestObject struct {
+}
+
+type GetTasksResponseObject interface {
+	VisitGetTasksResponse(w http.ResponseWriter) error
+}
+
+type GetTasks200JSONResponse []Task
+
+func (response GetTasks200JSONResponse) VisitGetTasksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetTasks500JSONResponse ErrorResponse
+
+func (response GetTasks500JSONResponse) VisitGetTasksResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
 }
 
 type PostTasksRequestObject struct {
@@ -380,6 +418,9 @@ func (response PostTasksId500JSONResponse) VisitPostTasksIdResponse(w http.Respo
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Get all tasks
+	// (GET /tasks)
+	GetTasks(ctx context.Context, request GetTasksRequestObject) (GetTasksResponseObject, error)
 	// Create a new task
 	// (POST /tasks)
 	PostTasks(ctx context.Context, request PostTasksRequestObject) (PostTasksResponseObject, error)
@@ -407,6 +448,29 @@ func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareF
 type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
+}
+
+// GetTasks operation middleware
+func (sh *strictHandler) GetTasks(ctx echo.Context) error {
+	var request GetTasksRequestObject
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetTasks(ctx.Request().Context(), request.(GetTasksRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetTasks")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(GetTasksResponseObject); ok {
+		return validResponse.VisitGetTasksResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
 }
 
 // PostTasks operation middleware
